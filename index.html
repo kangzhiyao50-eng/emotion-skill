@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>极简像素情绪海报生成器 · Skill 制作过程</title>
+<style>
+  /* ==========================================================
+     全局：纯白底 / 黑白灰 / 大留白 / 等宽像素标题 / 网格排版
+     ========================================================== */
+  :root {
+    --paper: #ffffff;
+    --ink: #111111;
+    --ink-2: #555555;
+    --ink-3: #8c8c8c;
+    --line: #e5e5e5;
+    --wash: #fafafa;
+
+    --mono: "Zpix", "Press Start 2P", ui-monospace, Consolas, "Courier New", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+
+    --step: 8px;
+  }
+
+  @font-face {
+    font-family: "Zpix";
+    src: url("../fonts/Zpix.ttf") format("truetype"),
+         url("https://cdn.jsdelivr.net/gh/SolidZORO/zpix-pixel-font@3.1.1/dist/Zpix.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { background: var(--paper); }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  img { display: block; max-width: 100%; height: auto; }
+
+  /* ---------- 版心 ---------- */
+  .wrap {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ==========================================================
+     01 顶部标题区
+     ========================================================== */
+  .hero {
+    padding: 96px 0 56px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .hero .kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .22em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  .hero h1 {
+    font-family: var(--mono);
+    font-weight: 400;
+    font-size: clamp(24px, 4.6vw, 40px);
+    line-height: 1.5;
+    letter-spacing: .01em;
+    max-width: 22em;
+  }
+
+  .hero .sub {
+    margin-top: 24px;
+    font-family: var(--mono);
+    font-size: clamp(12px, 2vw, 15px);
+    letter-spacing: .14em;
+    color: var(--ink-2);
+  }
+
+  .hero .meta {
+    margin-top: 48px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 32px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    color: var(--ink-3);
+  }
+
+  /* ==========================================================
+     通用板块：左侧编号 + 右侧内容（网格感）
+     ========================================================== */
+  .section {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    column-gap: 32px;
+    padding-top: 104px;
+  }
+
+  .section .num {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    color: var(--ink-3);
+    padding-top: 8px;
+  }
+
+  .section h2 {
+    font-family: var(--mono);
+    font-weight: 400;
+    font-size: clamp(17px, 2.4vw, 21px);
+    line-height: 1.6;
+    letter-spacing: .04em;
+    margin-bottom: 32px;
+  }
+
+  .section p + p { margin-top: 16px; }
+
+  /* 正文：解除窄宽度，给一个舒适的阅读上限并居中 */
+  .lead {
+    color: var(--ink-2);
+    width: 100%;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .lead--stack { margin-top: 32px; }
+
+  /* ---------- 八图海报画廊：4 列网格 ---------- */
+  .poster-gallery {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    width: 100%;
+    max-width: 800px;
+    margin: 40px auto 0;
+  }
+
+  .poster-gallery img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 4;      /* 海报固定 3:4，缺图时也保住格子 */
+    object-fit: cover;
+    display: block;
+    border: 1px solid #000;
+    background: var(--wash);
+  }
+
+  @media (max-width: 760px) {
+    .poster-gallery {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+  }
+
+  /* ---------- SKILL.md 完整规则块（右上角复制）---------- */
+  .spec {
+    margin-top: 48px;
+    border: 1px solid var(--line);
+  }
+
+  .spec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--wash);
+  }
+
+  .spec-head .name {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .16em;
+    color: var(--ink-3);
+  }
+
+  .copy-btn {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 0;
+    cursor: pointer;
+    transition: background .12s linear, color .12s linear;
+  }
+
+  .copy-btn:hover,
+  .copy-btn[data-done="true"] {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .copy-btn:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  .spec pre {
+    margin: 0;
+    padding: 20px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.95;
+    color: var(--ink-2);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* ---------- 图片：双列并排 ---------- */
+  .duo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  figure { min-width: 0; }
+
+  figure img {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: var(--wash);
+  }
+
+  figcaption {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    color: var(--ink-3);
+  }
+
+  /* ---------- 图文左右分栏：图 40% / 文 60% ---------- */
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 40px;
+    align-items: start;
+  }
+
+  /* 右栏文字给足呼吸空间，避免被挤成细长条 */
+  .split .ph { max-width: 100%; }
+
+  /* ---------- 文件与流程：变量说明 + 五条规则清单 ---------- */
+  .flow-intro .lead + .lead { margin-top: 16px; }
+
+  .lead code {
+    padding: 1px 5px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-2);
+    background: var(--wash);
+    border: 1px solid var(--line);
+  }
+
+  .rules {
+    counter-reset: rule;
+    list-style: none;
+    width: 100%;
+    max-width: 800px;
+    margin: 40px auto 0;
+  }
+
+  .rules li {
+    counter-increment: rule;
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 8px;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+    color: var(--ink-2);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .rules li::before {
+    content: counter(rule, decimal-leading-zero);
+    padding-top: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    color: var(--ink-3);
+  }
+
+  .rules li:last-child { border-bottom: 1px solid var(--line); }
+
+  .rules-note {
+    width: 100%;
+    max-width: 800px;
+    margin: 24px auto 0;
+    padding-left: 16px;
+    border-left: 2px solid var(--ink);
+    color: var(--ink-2);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  /* ---------- 05 关键修改：四个阶段（左图 30% / 右文 65%）---------- */
+  .stage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 64px;
+  }
+
+  .stage {
+    display: flex;
+    align-items: center;      /* 左图与右文垂直居中对齐 */
+    gap: 5%;
+  }
+
+  .stage-media {
+    flex: 0 0 30%;
+    min-width: 0;
+  }
+
+  .stage-media img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border: 1px solid var(--line);
+    background: var(--wash);
+  }
+
+  .stage-media figcaption {
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    color: var(--ink-3);
+  }
+
+  .stage-body {
+    flex: 0 0 65%;
+    min-width: 0;
+  }
+
+  .stage-body h3 {
+    margin-bottom: 12px;
+    font-family: var(--mono);
+    font-weight: 400;
+    font-size: 15px;
+    letter-spacing: .04em;
+    line-height: 1.6;
+  }
+
+  .issue {
+    color: var(--ink-2);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .issue .label {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 0 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    color: var(--ink-3);
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+
+  .stage-body .spec { margin-top: 16px; }
+
+  .stage-body .spec pre {
+    font-size: 11.5px;
+    line-height: 1.85;
+  }
+
+  @media (max-width: 760px) {
+    .stage-list { gap: 48px; }
+    .stage {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 20px;
+    }
+    .stage-media,
+    .stage-body { flex: 1 1 auto; }
+    .stage-media img { max-width: 240px; }
+  }
+
+  /* ---------- 占位文本块（待填写） ---------- */
+  .ph {
+    width: 100%;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px dashed #d2d2d2;
+    background: var(--wash);
+    padding: 24px;
+    color: #6f6f6f;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .ph .tag {
+    display: inline-block;
+    margin-bottom: 12px;
+    padding: 2px 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    color: var(--ink-3);
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+
+  .ph--long { min-height: 360px; }
+
+  /* 图注与说明之间留白 */
+  .duo + .ph,
+  .split + .ph { margin-top: 32px; }
+
+  .section .hint {
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    color: var(--ink-3);
+  }
+
+  /* ==========================================================
+     页脚
+     ========================================================== */
+  .foot {
+    margin-top: 120px;
+    border-top: 1px solid var(--line);
+    padding: 32px 0 96px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    color: var(--ink-3);
+  }
+
+  /* ==========================================================
+     响应式
+     ========================================================== */
+  @media (max-width: 760px) {
+    body { font-size: 14px; }
+
+    .hero { padding-top: 64px; padding-bottom: 40px; }
+
+    .section {
+      grid-template-columns: 1fr;
+      row-gap: 12px;
+      padding-top: 72px;
+    }
+
+    .section .num { padding-top: 0; }
+
+    .duo,
+    .split { grid-template-columns: 1fr; gap: 20px; }
+
+    .ph { padding: 20px; }
+    .ph--long { min-height: 300px; }
+
+    .foot { margin-top: 88px; padding-bottom: 72px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ========== 01 顶部标题区 ========== -->
+  <header class="hero">
+    <p class="kicker">Agent Skill / case study</p>
+    <h1>极简像素情绪海报生成器 Skill 制作过程</h1>
+    <p class="sub">Agent 交互与规则迭代</p>
+
+    <div class="meta">
+      <span>SKILL · pixel-emotion-poster</span>
+      <span>FORMAT · 3 : 4</span>
+      <span>2026.10</span>
+    </div>
+  </header>
+
+  <!-- ========== 01 用途与结果 ========== -->
+  <section class="section">
+    <div class="num">01</div>
+    <div class="body">
+      <h2>用途与结果</h2>
+
+      <div class="duo">
+        <figure>
+          <img src="./images/final-happy.png" alt="HAPPY 情绪海报成品" />
+          <figcaption>OUTPUT A · HAPPY #FFD700</figcaption>
+        </figure>
+        <figure>
+          <img src="./images/final-angry.png" alt="ANGRY 情绪海报成品" />
+          <figcaption>OUTPUT B · ANGRY #FF6B6B</figcaption>
+        </figure>
+      </div>
+
+      <p class="lead lead--stack">
+        输入一个情绪英文单词、一句中文短句、一张像素表情和一种背景色，就能得到一张 3:4 的极简像素情绪海报。
+      </p>
+
+      <!-- 完整 SKILL.md 规则，右上角按钮可一键复制 -->
+      <div class="spec">
+        <div class="spec-head">
+          <span class="name">SKILL.md · 完整规则</span>
+          <button class="copy-btn" id="copySkill" type="button">复制</button>
+        </div>
+        <pre id="skillText">---
+name: pixel-emotion-poster
+description: 根据用户提供的情绪英文、中文短句、中心像素表情和背景色，生成 3:4 的极简像素风格情绪海报。
+---
+
+# 极简像素情绪海报生成器
+
+## 适用任务
+生成 3:4 比例的极简像素风情绪海报，用于社交媒体分享或个人打卡。
+
+## 输入要求
+1. emotion_en: 情绪英文单词（如 HAPPY）
+2. emotion_cn: 中文短句（如“把开心存好”）
+3. face_png: 中心像素表情图片
+4. bg_color: 背景色（如 #FFD700）
+
+## 执行步骤
+1. 创建一个宽高比 3:4 的容器，背景色设为 bg_color。使用相对定位（`position: relative;`），并预留四周内边距（如 `padding: 40px;`）。
+2. **左上角文字区**：第一行放置 emotion_en，必须使用 'Press Start 2P' 像素字体，字号设为 32px（或 2rem），加粗显示，黑色。（其余规则全部保持不变**必须使用 'Press Start 2P' 像素字体**，字号大，黑色。
+   - 第二行放置 emotion_cn，使用宋体，浅灰色，字号较小，放在英文正下方。
+3. **中心表情**：将 face_png 放在画面绝对正中心（`position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);`）。
+4. **表情尺寸限制（关键）**：将 face_png 的宽度放大到容器的 **65%**，但必须加上最大高度限制（`max-height: 55%;`），确保它是一张巨大的海报脸，但**绝对不能和左上角的文字重叠，也绝对不能冲出画布边缘**。
+5. **底部日期**：在容器最底部居中放置当前日期，浅灰色小字。
+
+## 合格标准
+- 英文和中文紧紧贴着画面的**左上角**。
+- 情绪表情占据画面的绝对主体（非常大），且完美居中。
+- 表情、文字、边缘之间互不重叠。
+- 英文字体是像素风。</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 02 背景与需求 ========== -->
+  <section class="section">
+    <div class="num">02</div>
+    <div class="body">
+      <h2>背景与需求</h2>
+
+      <p class="lead">
+        制作这种生成海报的 Skill，是突然想以情绪的方向拓展（正好也映射现在人们对情绪的处理态度）。但每个人展现情绪的形式是不同的，所以想固定某一种风格：像素风 + 高饱和颜色。
+      </p>
+      <p class="lead">
+        以往在网页设计里，需要手动去改颜色、表情、文字；现在直接在 Skill 里改想要的颜色、字体，加上自己的表情，就能直接输出海报，不必在网页端一个一个挑选。这款 Skill 适合想要批量生成不同情绪海报来分享的用户。
+      </p>
+
+      <!-- 八张海报画廊：素材放入 ./images/ 后自动显示 -->
+      <div class="poster-gallery">
+        <img src="./images/poster-1.jpg" alt="情绪海报 01" />
+        <img src="./images/poster-2.png" alt="情绪海报 02" />
+        <img src="./images/poster-3.png" alt="情绪海报 03" />
+        <img src="./images/poster-4.png" alt="情绪海报 04" />
+        <img src="./images/poster-5.png" alt="情绪海报 05" />
+        <img src="./images/poster-6.png" alt="情绪海报 06" />
+        <img src="./images/poster-7.png" alt="情绪海报 07" />
+        <img src="./images/poster-8.png" alt="情绪海报 08" />
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 03 文件与流程 ========== -->
+  <section class="section">
+    <div class="num">03</div>
+    <div class="body">
+      <h2>文件与流程</h2>
+
+      <div class="split">
+        <figure>
+          <img src="./images/skill-code.png" alt="SKILL.md 规则文件截图" />
+          <figcaption>FILE · SKILL.md</figcaption>
+        </figure>
+
+        <!-- SKILL.md 的分工：四个变量 + 人与 Agent 的边界 -->
+        <div class="flow-intro">
+          <p class="lead">
+            SKILL.md 只规定四个变量：情绪英文 <code>emotion_en</code>、中文短句 <code>emotion_cn</code>、中心表情图 <code>face_png</code>、背景色 <code>bg_color</code>。
+          </p>
+          <p class="lead">
+            人负责提出意图，Agent 负责按这套 SKILL.md 输出代码；规则一旦写定，就变成可以反复调用的模板。
+          </p>
+        </div>
+      </div>
+
+      <ol class="rules">
+        <li>画布比例固定为 3:4，画布颜色由用户按自己想要的颜色自行搭配。</li>
+        <li>情绪表情占据画布一半以上，作为绝对主体，位于画布中下部，并与整张海报统一为像素风格。表情可由用户自己挑选上传（可用图片），也可以在网页端制作后保存使用。</li>
+        <li>英文字体统一为像素风（也可以直接修改 SKILL.md 里的英文字体），位于画布左上角，尺寸偏大；其中文解释都是情绪关键词。</li>
+        <li>中文字体固定在英文字体下方，浅灰色、字号偏小，不抢夺主体视觉；内容针对该情绪，是一句随机的激励话语。</li>
+        <li>日期放在画面最底部的中间位置，通常为当天日期。</li>
+      </ol>
+
+      <div class="rules-note">
+        <p>合格标准：字体与表情统一像素风；画面内容比例不超出画布大小；文字与表情之间互不重叠。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 04 关键修改 ========== -->
+  <section class="section">
+    <div class="num">04</div>
+    <div class="body">
+      <h2>关键修改</h2>
+
+      <div class="stage-list">
+
+        <!-- V1 -->
+        <article class="stage">
+          <figure class="stage-media">
+            <img src="./images/compare-v1.png" alt="V1 初版生成效果" />
+            <figcaption>V1 · compare-v1.png</figcaption>
+          </figure>
+
+          <div class="stage-body">
+            <h3>V1 阶段：初版生成</h3>
+            <p class="issue"><span class="label">问题</span>整个画面布局太小，没有铺满画布，字体也不符合像素风格要求，每一块都很散。</p>
+
+            <div class="spec">
+              <div class="spec-head">
+                <span class="name">SKILL.md 修改</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre>把原来的：
+“画面正中心放置 face_png，宽度占 60%……”
+
+改成：
+“画面正中心放置 face_png，宽度占 80%（或者 85%），限制最大高度不超过容器的 55%，确保表情占据视觉主体，且不能超出边界。”</pre>
+            </div>
+          </div>
+        </article>
+
+        <!-- V2 -->
+        <article class="stage">
+          <figure class="stage-media">
+            <img src="./images/v2.png" alt="V2 元素重叠效果" />
+            <figcaption>V2 · v2.png</figcaption>
+          </figure>
+
+          <div class="stage-body">
+            <h3>V2 阶段：元素重叠</h3>
+            <p class="issue"><span class="label">问题</span>文字与情绪表情重叠，英文字体也未修改成像素风格。</p>
+
+            <div class="spec">
+              <div class="spec-head">
+                <span class="name">SKILL.md 修改</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre>## 执行步骤
+1. 创建一个宽高比 3:4 的容器，背景色设为 bg_color，使用 Flex 布局垂直居中（`display: flex; flex-direction: column; align-items: center;`）。
+2. **顶部标题**：在最上方放置 emotion_en，**必须使用 Google Fonts 引入的像素字体（如 'Press Start 2P', monospace）**，字号大，黑色，加粗。如果字母过长，强制换行。
+3. **副标题**：在英文正下方（间距 20px），放置 emotion_cn，使用宋体（SimSun），浅灰色，字号较小。
+4. **中心表情**：在中文下方，放置 face_png，宽度占容器的 60%（或 70%），使用 `image-rendering: pixelated;` 确保边缘锐利。
+5. **底部日期**：在容器最底部，放置当前日期，浅灰色小字。
+
+## 合格标准
+- 所有元素垂直排列，**绝对不能发生重叠**。
+- 英文字体必须是像素方块风格。
+- 元素不超出边界。
+- 整体风格极简、克制。</pre>
+            </div>
+          </div>
+        </article>
+
+        <!-- V3 -->
+        <article class="stage">
+          <figure class="stage-media">
+            <img src="./images/v3.png" alt="V3 字体与布局修正效果" />
+            <figcaption>V3 · v3.png</figcaption>
+          </figure>
+
+          <div class="stage-body">
+            <h3>V3 阶段：字体与布局修正</h3>
+            <p class="issue"><span class="label">问题</span>重叠解决了，英文也变成了像素字体，但所有元素依然垂直居中，整个画面比例出现问题。</p>
+
+            <div class="spec">
+              <div class="spec-head">
+                <span class="name">SKILL.md 修改</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre>## 执行步骤
+1. 创建一个宽高比 3:4 的容器，背景色设为 bg_color。使用相对定位（`position: relative;`），并预留四周内边距（如 `padding: 40px;`）。
+2. **左上角文字区**：在容器左上角放置一个文字组。
+   - 第一行放置 emotion_en，**必须使用 'Press Start 2P' 像素字体**，字号大，黑色。
+   - 第二行放置 emotion_cn，使用宋体，浅灰色，字号较小，放在英文正下方。
+3. **中心表情**：将 face_png 放在画面绝对正中心（`position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);`）。
+4. **表情尺寸限制（关键）**：将 face_png 的宽度放大到容器的 **65%**，但必须加上最大高度限制（`max-height: 55%;`），确保它是一张巨大的海报脸，但**绝对不能和左上角的文字重叠，也绝对不能冲出画布边缘**。
+5. **底部日期**：在容器最底部居中放置当前日期，浅灰色小字。
+
+## 合格标准
+- 英文和中文紧紧贴着画面的**左上角**。
+- 情绪表情占据画面的绝对主体（非常大），且完美居中。
+- 表情、文字、边缘之间互不重叠。
+- 英文字体是像素风。</pre>
+            </div>
+          </div>
+        </article>
+
+        <!-- V4 -->
+        <article class="stage">
+          <figure class="stage-media">
+            <img src="./images/v4.png" alt="V4 最终定稿效果" />
+            <figcaption>V4 · v4.png</figcaption>
+          </figure>
+
+          <div class="stage-body">
+            <h3>V4 阶段：最终定稿</h3>
+            <p class="issue"><span class="label">问题</span>字体大小还需修改。</p>
+
+            <div class="spec">
+              <div class="spec-head">
+                <span class="name">SKILL.md 修改</span>
+                <button class="copy-btn" type="button">复制</button>
+              </div>
+              <pre>把原来的：
+“第一行放置 emotion_en，必须使用 'Press Start 2P' 像素字体，字号大，黑色。”
+
+修改为：
+“第一行放置 emotion_en，必须使用 'Press Start 2P' 像素字体，字号设为 32px（或 2rem），加粗显示，黑色。（其余规则全部保持不变）”</pre>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 05 两次测试 ========== -->
+  <section class="section">
+    <div class="num">05</div>
+    <div class="body">
+      <h2>两次测试</h2>
+
+      <div class="duo">
+        <figure>
+          <img src="./images/final-happy.png" alt="HAPPY 测试结果" />
+          <figcaption>TEST 01 · HAPPY</figcaption>
+        </figure>
+        <figure>
+          <img src="./images/final-angry.png" alt="ANGRY 测试结果" />
+          <figcaption>TEST 02 · ANGRY</figcaption>
+        </figure>
+      </div>
+
+      <p class="lead lead--stack">
+        事先不断修改黄色大笑海报，最终总结出一份 SKILL.md 的最终模板。但因为还不能确定这份规则是否真能稳定达到效果，于是又增加了一份情绪海报的生成：只改变变量——把 HAPPY 改成 ANGRY，背景色从 #FFD700 换成 #FF6B6B，并换上一张生气情绪的像素表情图，进行第二轮测试。
+      </p>
+
+      <p class="lead lead--stack">测试结果如下：</p>
+
+      <ol class="rules">
+        <li>Agent 能够稳定按照 SKILL.md 的规则，完整实现左上文字 + 下方中文解释 + 主体情绪表情 + 底部日期，并满足像素风格。</li>
+        <li>规则中限制了距离，主体情绪表情与上方、下方文字保持安全距离，没有出现重叠或溢出的问题。</li>
+        <li>每张情绪海报的最终效果统一，位置、比例、大小、字体都相同。</li>
+      </ol>
+
+      <div class="rules-note">
+        <p>但也存在一定局限：情绪表情仍需自己去找图片，或在网页端自行生成；遇到较长的情绪英文单词时可能处理得不够好，需要手动调试。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 06 个人收获 ========== -->
+  <section class="section">
+    <div class="num">06</div>
+    <div class="body">
+      <h2>个人收获</h2>
+
+      <p class="lead">
+        通过制作、修改、完善 SKILL.md 规则的过程，我发现它对“靠左来一点”“画面比例不要太大”这类模糊描述其实并不敏感——它听不懂“一点”是多少，也不知道“不要太大”对应什么数值。真正有效的是更准确、可执行的提示词：把“靠左来一点”换成“top: 40px; left: 40px”，把“比例不要太大”换成“width: 65%; max-height: 55%”，它在修改海报时就会明显更准、更容易一次到位。
+      </p>
+
+      <p class="lead lead--stack">
+        也许对于 Agent 来说，海报算是一个相对简单的任务：只要规则写清楚，版式、字体、间距都能稳定复现、一次性完成。真正可以继续延伸的是质感——增加某种纹理，或者做成邮票效果、钥匙扣的感觉，让同一套规则产出更多形态的小物。
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== 页脚 ========== -->
+  <footer class="foot">
+    <span>PIXEL EMOTION POSTER · SKILL</span>
+    <span>2026.10.18</span>
+  </footer>
+
+</div>
+
+<script>
+  /* 每个 .spec 右上角的复制按钮：优先 clipboard API，file:// 下回退 execCommand */
+  (function () {
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+      return new Promise(function (resolve, reject) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy') ? resolve() : reject(new Error('copy failed'));
+        } catch (err) {
+          reject(err);
+        }
+        document.body.removeChild(ta);
+      });
+    }
+
+    function flash(btn, text) {
+      btn.textContent = text;
+      btn.dataset.done = 'true';
+      setTimeout(function () {
+        btn.textContent = '复制';
+        btn.dataset.done = 'false';
+      }, 1600);
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.spec'), function (box) {
+      var btn = box.querySelector('.copy-btn');
+      var pre = box.querySelector('pre');
+      if (!btn || !pre) return;
+
+      btn.addEventListener('click', function () {
+        copyText(pre.textContent).then(function () {
+          flash(btn, '已复制');
+        }).catch(function () {
+          flash(btn, '请手动选择');
+        });
+      });
+    });
+  })();
+</script>
+</body>
+</html>
