@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HAPPY · 极简像素情绪海报</title>
+
+<!-- 规则②：emotion_en 必须使用 'Press Start 2P' 像素字体（Google Fonts） -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+
+<style>
+  /* ============================================================
+     skill: pixel-emotion-poster（最新规则）
+       emotion_en : HAPPY
+       emotion_cn : 把这份开心存好，下雨天派上用场。
+       face_png   : 图4.png（与本文件同级）
+       bg_color   : #FFD700
+
+     版式
+       · 容器 position: relative，四周内边距 7.4%（≈40px @540 宽）
+       · 左上角文字组：英文（Press Start 2P）→ 中文（宋体·浅灰）
+       · 正中表情：absolute 50%/50% + translate(-50%,-50%)，宽 65%，max-height 55%
+       · 底部居中日期
+     ============================================================ */
+
+  @font-face {
+    font-family: "Zpix";
+    src: url("../fonts/Zpix.ttf") format("truetype"),
+         url("https://cdn.jsdelivr.net/gh/SolidZORO/zpix-pixel-font@3.1.1/dist/Zpix.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+  }
+
+  :root {
+    --bg: #FFD700;            /* bg_color */
+    --ink: #000000;
+    --muted: rgba(0, 0, 0, .42);
+    --pad: 7.4%;              /* 四周内边距 ≈ 40px（540 宽时） */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: #f0efeb;
+  }
+
+  /* ---------- ① 3:4 容器：相对定位 + 内边距 ---------- */
+  .poster {
+    position: relative;
+    width: min(92vw, 540px);
+    aspect-ratio: 3 / 4;
+    padding: var(--pad);
+    overflow: hidden;                  /* 任何元素都不得冲出画布 */
+    container-type: inline-size;
+    background: var(--bg);
+  }
+
+  /* ---------- ② 左上角文字组（左对齐，不居中）---------- */
+  .head {
+    position: absolute;
+    top: var(--pad);
+    left: var(--pad);
+    right: var(--pad);
+    text-align: left;
+  }
+
+  /* 第一行：像素英文 */
+  .en {
+    display: block;
+    color: var(--ink);
+    font-family: "Press Start 2P", "Zpix", monospace;
+    font-size: 32px;                   /* 最新 skill：固定 32px */
+    font-weight: 700;                  /* 最新 skill：加粗 */
+    line-height: 1.32;
+    letter-spacing: .02em;
+    text-align: left;
+    word-break: break-all;             /* 字母过长强制换行 */
+    overflow-wrap: anywhere;
+    -webkit-font-smoothing: none;
+  }
+
+  /* 第二行：中文，紧贴英文正下方 */
+  .cn {
+    display: block;
+    margin-top: 18px;
+    color: var(--muted);
+    font-family: "SimSun", "Songti SC", "STSong", serif;
+    font-size: clamp(11px, 3cqw, 16px);
+    line-height: 1.7;
+    letter-spacing: .05em;
+    text-align: left;
+  }
+
+  /* ---------- ③④ 正中表情：绝对居中，宽 65%，高度封顶 55% ---------- */
+  .face {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 65%;
+    max-height: 55%;                   /* 关键：绝不顶到文字、也不出画布 */
+    height: auto;
+    object-fit: contain;
+    image-rendering: pixelated;
+    -webkit-user-drag: none;
+  }
+
+  /* ---------- ⑤ 底部居中日期 ---------- */
+  .date {
+    position: absolute;
+    bottom: var(--pad);
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--muted);
+    font-family: "Zpix", "Press Start 2P", monospace;
+    font-size: clamp(10px, 2.4cqw, 13px);
+    letter-spacing: .2em;
+    text-indent: .2em;
+    white-space: nowrap;
+  }
+
+  /* 窄屏微调：文字更紧凑，给中心大脸让位 */
+  @media (max-width: 400px) {
+    :root { --pad: 6.5%; }
+    /* 英文保持 32px 固定值，窄屏也不再缩小 */
+    .cn { margin-top: 12px; }
+  }
+
+  /* ---------- 保存按钮（在海报之外，不参与海报排版）---------- */
+  .save-btn {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 10;
+    padding: 10px 16px;
+    color: #000;
+    font-family: "Zpix", "Press Start 2P", monospace;
+    font-size: 12px;
+    letter-spacing: .12em;
+    background: #ffffff;
+    border: 2px solid #000;
+    border-radius: 0;
+    cursor: pointer;
+    box-shadow: 4px 4px 0 #000;
+    transition: transform .06s linear, box-shadow .06s linear;
+  }
+  .save-btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #000; }
+  .save-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  .save-btn[disabled] { opacity: .5; cursor: wait; }
+
+  /* 打印时只留海报本身（file:// 下导出受限时的兜底路径） */
+  @media print {
+    body { background: #fff; padding: 0; min-height: 0; display: block; }
+    .save-btn { display: none !important; }
+    .poster { width: 100%; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+  <article class="poster">
+    <header class="head">
+      <span class="en">HAPPY</span>
+      <span class="cn">把这份开心存好，下雨天派上用场。</span>
+    </header>
+
+    <img class="face" src="图4.png" alt="像素笑脸" />
+
+    <time class="date" datetime="2026-10-18">2026.10.18</time>
+  </article>
+
+  <!-- 保存海报：按 2 倍分辨率重绘到 canvas，导出 PNG -->
+  <button class="save-btn" id="saveBtn" type="button">保存海报 PNG</button>
+
+  <script>
+    (function () {
+      var poster = document.querySelector('.poster');
+      var en = document.querySelector('.en');
+      var cn = document.querySelector('.cn');
+      var face = document.querySelector('.face');
+      var date = document.querySelector('.date');
+      var btn = document.getElementById('saveBtn');
+
+      /* 取元素相对海报左上角的位置与尺寸（CSS px） */
+      function rectOf(el) {
+        var b = poster.getBoundingClientRect();
+        var r = el.getBoundingClientRect();
+        return { x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height };
+      }
+
+      /* 中文按实际宽度逐字折行 */
+      function wrap(ctx, text, maxWidth) {
+        var lines = [], line = '';
+        for (var i = 0; i < text.length; i++) {
+          var next = line + text[i];
+          if (ctx.measureText(next).width > maxWidth && line) {
+            lines.push(line);
+            line = text[i];
+          } else {
+            line = next;
+          }
+        }
+        if (line) lines.push(line);
+        return lines;
+      }
+
+      async function toCanvas(scale) {
+        try { await document.fonts.load('700 32px "Press Start 2P"'); } catch (e) {}
+        try { await document.fonts.ready; } catch (e) {}
+        try { await face.decode(); } catch (e) {}
+
+        var b = poster.getBoundingClientRect();
+        var W = b.width, H = b.height;
+
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(W * scale);
+        canvas.height = Math.round(H * scale);
+        var ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.imageSmoothingEnabled = false;
+
+        /* 背景色 */
+        ctx.fillStyle = getComputedStyle(poster).backgroundColor;
+        ctx.fillRect(0, 0, W, H);
+
+        /* 英文标题 */
+        var r = rectOf(en), s = getComputedStyle(en);
+        ctx.font = s.fontWeight + ' ' + s.fontSize + ' ' + s.fontFamily;
+        ctx.fillStyle = s.color;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        try { ctx.letterSpacing = s.letterSpacing; } catch (e) {}
+        ctx.fillText(en.textContent.trim(), r.x, r.y + r.h / 2);
+
+        /* 中文副标题 */
+        r = rectOf(cn); s = getComputedStyle(cn);
+        ctx.font = s.fontStyle + ' ' + s.fontWeight + ' ' + s.fontSize + ' ' + s.fontFamily;
+        ctx.fillStyle = s.color;
+        try { ctx.letterSpacing = s.letterSpacing; } catch (e) {}
+        var lh = parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.7;
+        var lines = wrap(ctx, cn.textContent.trim(), r.w);
+        for (var i = 0; i < lines.length; i++) {
+          ctx.fillText(lines[i], r.x, r.y + lh * (i + 0.5));
+        }
+
+        /* 中心表情：按屏幕上的实际位置与尺寸绘制 */
+        r = rectOf(face);
+        ctx.drawImage(face, r.x, r.y, r.w, r.h);
+
+        /* 底部日期 */
+        r = rectOf(date); s = getComputedStyle(date);
+        ctx.font = s.fontWeight + ' ' + s.fontSize + ' ' + s.fontFamily;
+        ctx.fillStyle = s.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        try { ctx.letterSpacing = s.letterSpacing; } catch (e) {}
+        ctx.fillText(date.textContent.trim(), r.x + r.w / 2, r.y + r.h / 2);
+
+        return canvas;
+      }
+
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        toCanvas(2).then(function (canvas) {
+          canvas.toBlob(function (blob) {
+            if (!blob) { window.print(); return; }   /* 导出失败 → 打印兜底 */
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = en.textContent.trim() + '-' + date.textContent.trim() + '.png';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+          }, 'image/png');
+        }).catch(function () {
+          /* 双击打开（file://）时本地图片会污染画布，退回「打印 → 另存为 PDF」 */
+          window.print();
+        }).then(function () {
+          btn.disabled = false;
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
